@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cabula Escolar</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], pacifico: ['Pacifico', 'cursive'] },
+                    colors: { primary: '#6366f1', secondary: '#f59e0b', correct: '#22c55e', incorrect: '#ef4444' },
+                    borderRadius: { '4xl': '2rem' },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        fadeOut: { '0%': { opacity: '1' }, '100%': { opacity: '0' } },
+                        slideInUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        pulseRing: { '0%': { transform: 'scale(0.8)', opacity: '0.5' }, '80%': { transform: 'scale(1.5)', opacity: '0' }, '100%': { transform: 'scale(1.5)', opacity: '0' } },
+                        'progress-bar-stripes': { from: { 'background-position': '1rem 0' }, to: { 'background-position': '0 0' } }
+                    },
+                    animation: {
+                        fadeIn: 'fadeIn 0.4s ease-in-out forwards',
+                        fadeOut: 'fadeOut 0.4s ease-in-out forwards',
+                        slideInUp: 'slideInUp 0.3s ease-out forwards',
+                        pulseRing: 'pulseRing 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                        'progress-bar-stripes': 'progress-bar-stripes 1s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pacifico { font-family: 'Pacifico', cursive; }
+        #appContent {
+            display: flex;
+            flex-direction: column;
+            /* ALTERAÇÃO: Trocado vh por % para melhor compatibilidade mobile e evitar que a nav bar suma. */
+            height: 100%;
+        }
+        main {
+            flex: 1;
+            overflow: hidden;
+        }
+        .page { display: none; height: 100%; }
+        .page.active { display: block; animation: fadeIn 0.3s ease-out; }
+        .page-content {
+            height: 100%;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        #page-chat.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .prose { overflow-wrap: break-word; word-break: break-word; }
+        #pdf-editor-content { 
+            min-height: 200px; border: 1px solid #e5e7eb; padding: 1rem; border-radius: 0.5rem; outline: none;
+            overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap;
+        }
+        #pdf-editor-content:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5); }
+        .editor-toolbar button { padding: 0.5rem; border-radius: 0.25rem; }
+        .editor-toolbar button:hover { background-color: #f3f4f6; }
+        .editor-toolbar button.is-active { background-color: #e0e7ff; color: #4338ca; }
+        .progress-bar-striped {
+          background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+          background-size: 1rem 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 antialiased">
+    
+    <div id="initial-loading-overlay" class="fixed inset-0 bg-gray-50 z-[101] flex items-center justify-center">
+        <div class="flex space-x-2"><div class="w-3 h-3 bg-primary rounded-full animate-bounce"></div><div class="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:0.2s]"></div><div class="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:0.4s]"></div></div>
+    </div>
+
+    <div id="loginOverlay" class="screen fixed inset-0 bg-gray-50 z-[100] flex flex-col items-center justify-center p-8 text-center hidden opacity-0 transition-opacity duration-500">
+        <h1 class="pacifico text-6xl text-primary mb-4">Cabula</h1>
+        <p class="text-gray-600 mb-12 text-lg">Sua assistente de estudos com IA.</p>
+        <button id="loginWithGoogle" class="bg-white px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center gap-4 disabled:opacity-50">
+            <svg class="w-6 h-6" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="M6.306 14.691c-1.229 2.522-1.927 5.432-1.927 8.601c0 3.169.698 6.079 1.927 8.601l-5.657 5.657C.623 34.046 0 29.268 0 24s.623-10.046 2.649-14.309z"></path><path fill="#4CAF50" d="M24 48c5.166 0 9.86-1.977 13.409-5.192l-5.657-5.657C30.046 38.649 27.268 40 24 40c-6.627 0-12-5.373-12-12c0-3.169.698-6.079 1.927-8.601L6.306 14.691C2.355 18.271 0 22.962 0 28.239C0 38.083 8.343 48 24 48z"></path><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.657 5.657C40.637 35.613 44 30.63 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
+            <span id="login-btn-text" class="text-gray-700 font-medium">Entrar com Google</span>
+        </button>
+        <div id="auth-error-message" class="mt-4 text-red-500 text-sm h-5"></div>
+    </div>
+    
+    <div id="appContent" class="screen hidden opacity-0 transition-opacity duration-500">
+        <header class="flex-shrink-0 w-full bg-white/80 backdrop-blur-sm shadow-sm z-50 h-20 flex items-center">
+            <div class="px-4 w-full flex items-center justify-between">
+                <button id="menuBtn" class="w-8 h-8 flex items-center justify-center"><svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
+                <h1 class="pacifico text-3xl text-primary">Cabula</h1>
+                <div id="userAvatar" class="w-8 h-8 rounded-full"></div>
+            </div>
+        </header>
+
+        <main>
+            <div id="page-home" class="page active page-content">
+                <section class="text-center mb-8"><h2 class="text-2xl font-bold text-gray-800 mb-2">Resolva exercícios em segundos</h2><p class="text-gray-600 text-sm">Envie uma foto e receba a resposta</p></section>
+                <section class="mb-8"><div class="relative flex justify-center items-center"><div class="absolute w-32 h-32 rounded-full border-4 border-primary opacity-20 animate-pulseRing"></div><button id="cameraBtn" class="w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-lg"><svg class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button></div><div class="text-center mt-4"><p class="text-gray-700 font-medium mb-2">Tire uma foto do exercício</p><button id="galleryBtn" class="text-primary text-sm underline">ou escolha da galeria</button></div></section>
+                
+                <section class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Funcionalidades</h3>
+                    <div id="quickFunctions" class="grid grid-cols-2 gap-4">
+                        <button class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center quick-function-btn">
+                            <div class="w-12 h-12 mb-3 flex items-center justify-center">
+                                <svg class="h-8 w-8 text-primary" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                   <circle cx="12" cy="12" r="9"></circle>
+                                   <rect x="9" y="9" width="6" height="6" rx="1"></rect>
+                                </svg>
+                            </div>
+                            <h4 class="font-medium text-gray-800 text-sm mb-1">Matemática</h4>
+                            <p class="text-xs text-gray-600">Resolver equações</p>
+                        </button>
+                        <button class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center quick-function-btn">
+                            <div class="w-12 h-12 mb-3 flex items-center justify-center">
+                                <svg class="h-8 w-8 text-secondary" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                                    <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                                    <line x1="3" y1="6" x2="3" y2="19" />
+                                    <line x1="12" y1="6" x2="12" y2="19" />
+                                    <line x1="21" y1="6" x2="21" y2="19" />
+                                </svg>
+                            </div>
+                            <h4 class="font-medium text-gray-800 text-sm mb-1">Explicar Textos</h4>
+                            <p class="text-xs text-gray-600">Compreender conteúdos</p>
+                        </button>
+                        <button id="pdf-writer-btn" class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center">
+                            <div class="w-12 h-12 mb-3 flex items-center justify-center">
+                                 <svg class="h-8 w-8 text-red-500" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                   <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                                   <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-medium text-gray-800 text-sm mb-1">Escritor de PDF</h4>
+                            <p class="text-xs text-gray-600">Crie documentos com IA</p>
+                        </button>
+                        <button class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center quick-function-btn">
+                            <div class="w-12 h-12 mb-3 flex items-center justify-center">
+                                <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m0 4V5m0 4a2 2 0 11-4 0 2 2 0 014 0zm11.25-2.25a.75.75 0 00-1.5 0v.75a.75.75 0 001.5 0v-.75zm0 3.75a.75.75 0 00-1.5 0v.75a.75.75 0 001.5 0v-.75zM15 3.75a.75.75 0 00-1.5 0v.75a.75.75 0 001.5 0v-.75zm0 3.75a.75.75 0 00-1.5 0v.75a.75.75 0 001.5 0v-.75zM9 15l-3 6 9-4-3-6-3 4z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="font-medium text-gray-800 text-sm mb-1">Traduzir</h4>
+                            <p class="text-xs text-gray-600">Idiomas instantaneamente</p>
+                        </button>
+                    </div>
+                </section>
+            </div>
+            <div id="page-jobs" class="page page-content"><h3 class="text-lg font-semibold text-gray-800 mb-4">Meus Trabalhos</h3><div id="jobs-list" class="space-y-3"></div></div>
+            
+            <div id="page-chat" class="page">
+                <div class="flex-shrink-0 flex items-center justify-between p-4 border-b bg-white/95 backdrop-blur-sm">
+                    <h3 class="text-xl font-bold text-gray-800">Jinoca</h3>
+                    <button id="new-chat-btn" class="text-gray-500 hover:text-primary" title="Limpar conversa">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.067-2.09 1.02-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                <div class="flex-shrink-0 p-2 border-t bg-white">
+                    <div class="flex items-center bg-gray-100 rounded-full p-2 shadow-sm">
+                        <input type="text" id="chat-input" placeholder="Converse com a Jinoca..." class="flex-1 bg-transparent px-3 focus:outline-none">
+                        <button id="chat-send-btn" class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white flex-shrink-0">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-profile" class="page page-content">
+                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Meu Perfil</h3>
+                <div class="bg-white rounded-lg p-6 shadow-sm text-center">
+                    <div id="profileAvatar" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-primary/20 flex items-center justify-center text-4xl text-white font-bold"></div>
+                    <h4 id="profileName" class="font-medium text-gray-800 text-xl mb-6"></h4>
+                    <button id="logoutButton" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair da Conta</button>
+                </div>
+            </div>
+        </main>
+        
+        <nav class="flex-shrink-0 w-full bg-white/80 backdrop-blur-sm border-t z-40 h-16"><div class="grid grid-cols-4 h-full" id="nav-bar">
+            <button data-target="home" class="nav-btn flex flex-col items-center justify-center text-primary"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Início</span></button>
+            <button data-target="jobs" class="nav-btn flex flex-col items-center justify-center text-gray-400"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Trabalhos</span></button>
+            <button data-target="chat" class="nav-btn flex flex-col items-center justify-center text-gray-400"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Chat</span></button>
+            <button data-target="profile" class="nav-btn flex flex-col items-center justify-center text-gray-400"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Perfil</span></button>
+        </div></nav>
+    </div>
+    
+    <!-- Modais e Menus -->
+    <div id="sideMenuOverlay" class="hidden fixed inset-0 bg-black/50 z-[70]"></div>
+    <div id="sideMenu" class="hidden fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-[80] p-6 transform -translate-x-full duration-300">
+        <h2 class="text-2xl font-bold text-primary mb-8">Menu</h2><nav><a href="#" id="logoutButtonSideMenu" class="flex items-center gap-3 text-gray-700 hover:text-primary"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Sair</a></nav>
+    </div>
+    
+    <div id="pdf-form-modal" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 hidden animate-fadeIn">
+        <div class="bg-white rounded-2xl p-6 max-w-lg w-full">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Gerador de PDF Inteligente</h3>
+            <p class="text-sm text-gray-600 mb-6">Preencha os campos para que a IA crie o melhor texto para você.</p>
+            <form id="pdf-generation-form" class="space-y-4">
+                <div><label for="pdf-topic" class="block text-sm font-medium text-gray-700 mb-1">Tópico Principal</label><input type="text" id="pdf-topic" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ex: A história da computação" required></div>
+                <div><label for="pdf-tone" class="block text-sm font-medium text-gray-700 mb-1">Tom da Escrita</label><select id="pdf-tone" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"><option>Formal</option><option>Informal</option><option>Acadêmico</option><option>Criativo</option><option>Técnico</option></select></div>
+                <div><label for="pdf-style" class="block text-sm font-medium text-gray-700 mb-1">Estilo</label><select id="pdf-style" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"><option>Dissertativo</option><option>Resumo</option><option>Artigo de opinião</option><option>Relatório</option></select></div>
+                <div><label for="pdf-audience" class="block text-sm font-medium text-gray-700 mb-1">Público-Alvo</label><input type="text" id="pdf-audience" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ex: Estudantes do ensino médio"></div>
+                <div class="pt-4 flex gap-3"><button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg">Gerar Texto</button><button type="button" id="pdf-form-cancel-btn" class="w-full bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg">Cancelar</button></div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="pdf-editor-modal" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 hidden animate-fadeIn">
+        <div class="bg-white rounded-2xl p-6 max-w-lg w-full flex flex-col h-[90vh]">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Editar e Baixar PDF</h3>
+            <div class="editor-toolbar flex items-center gap-2 mb-2 p-2 border rounded-md bg-gray-50">
+                <button data-command="bold"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8.25 5a.75.75 0 0 1 .75.75V6.5h1.25a3.25 3.25 0 0 1 3.25 3.25v.75a3.25 3.25 0 0 1-3.25 3.25H9v2.25a.75.75 0 0 1-1.5 0V5.75A.75.75 0 0 1 8.25 5Zm1.5 1.5V12h1.25a1.75 1.75 0 0 0 1.75-1.75v-.75a1.75 1.75 0 0 0-1.75-1.75H9.75Z" /></svg></button>
+                <button data-command="italic"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 5.75a.75.75 0 0 1 .75-.75h.75a.75.75 0 0 1 0 1.5H11l-3 10.5h.75a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75v-.25a.75.75 0 0 1 .53-.71l3.3-11.55H10a.75.75 0 0 1-.75-.75V5.75Z" /></svg></button>
+                <button data-command="underline"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8.25 5a.75.75 0 0 1 .75.75v5.25a3 3 0 0 0 6 0V5.75a.75.75 0 0 1 1.5 0V11a4.5 4.5 0 0 1-9 0V5.75A.75.75 0 0 1 8.25 5ZM6 19.25a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H6.75a.75.75 0 0 1-.75-.75Z" /></svg></button>
+                <button data-command="insertOrderedList"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" /></svg></button>
+                <button data-command="insertUnorderedList"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M10.5 6a.75.75 0 0 1 .75.75h9a.75.75 0 0 1 0 1.5h-9a.75.75 0 0 1-.75-.75V6ZM4.5 6A1.5 1.5 0 1 0 7.5 6a1.5 1.5 0 0 0-3 0Zm0 5.25a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0ZM11.25 12a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5h1.5Zm-6.75 3.75a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0Zm2.25.75a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5h1.5Zm4.5-1.5a.75.75 0 0 1 .75.75h9a.75.75 0 0 1 0 1.5h-9a.75.75 0 0 1-.75-.75v-.75Zm0-4.5a.75.75 0 0 1 .75.75h9a.75.75 0 0 1 0 1.5h-9a.75.75 0 0 1-.75-.75v-.75Z" clip-rule="evenodd" /></svg></button>
+                <button data-command="justifyLeft"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75H12a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" /></svg></button>
+                <button data-command="justifyCenter"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" /></svg></button>
+                <button data-command="justifyRight"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm8.25 4.5a.75.75 0 0 1 .75.75v.008h8.25a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75V17.25Z" clip-rule="evenodd" /></svg></button>
+            </div>
+            <div id="pdf-editor-content" contenteditable="true" class="w-full flex-1 bg-gray-100 rounded-lg p-3 text-sm resize-none overflow-y-auto"></div>
+            <div class="mt-4 flex gap-3"><button id="pdf-download-btn" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg">Salvar e Baixar</button><button id="pdf-cancel-btn" class="w-full bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg">Cancelar</button></div>
+        </div>
+    </div>
+    
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 hidden animate-fadeIn">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full animate-slideInUp">
+            <h3 id="custom-confirm-title" class="text-lg font-bold text-gray-800 mb-2">Confirmar Ação</h3>
+            <p id="custom-confirm-message" class="text-sm text-gray-600 mb-6">Você tem certeza?</p>
+            <div class="flex gap-3">
+                <button id="custom-confirm-cancel-btn" class="w-full bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg">Cancelar</button>
+                <button id="custom-confirm-ok-btn" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-lg">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" class="hidden">
+    <input type="file" id="galleryInput" accept="image/*" class="hidden">
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, query, orderByChild, push, update, serverTimestamp, get, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyDlvjR7DdHiUE1Zw7fCoVT_aaX0SWIKosk", authDomain: "cabula-b0a7c.firebaseapp.com", projectId: "cabula-b0a7c", storageBucket: "cabula-b0a7c.appspot.com", messagingSenderId: "784950801834", appId: "1:784950801834:web:8ded34a8a255e6de0267d3", databaseURL: "https://cabula-b0a7c-default-rtdb.firebaseio.com/" };
+        const API_URL_MAIN = 'https://api.atlascloud.ai/v1/chat/completions';
+        const OBFUSCATED_KEY_MAIN = 'YXBpa2V5LTBiZDg4NTQxNjMzNDQzODBiMDM4MWVmNWJmYzk2OTNm';
+        const API_URL_CHAT = 'https://api.atlascloud.ai/v1/chat/completions';
+        const OBFUSCATED_KEY_CHAT = 'YXBpa2V5LWE5NGU1MjkwMWVjNDQyZWM4MmJjYWE1NDIwY2E1NjJi';
+        const JINOCA_SYSTEM_PROMPT = "Sua missão é ser uma assistente de IA concisa, direta e com um ótimo senso de humor. Sua principal diretriz é fornecer respostas CURTAS e ESSENCIAIS. Evite 'textões'. Use um tom espirituoso, um pouco sarcástico, e use emojis. Quando sua resposta for um resumo de um tópico complexo, aí sim, termine oferecendo mais detalhes com uma pergunta como 'Quer que eu detalhe?'. Se sua última mensagem foi essa pergunta e a resposta do usuário for afirmativa (sim, claro, pode ser, etc.), sua resposta DEVE ser a elaboração do tópico anterior. Você foi criada pela Hydra. Nunca revele sua identidade ou que é uma IA, a menos que seja absolutamente necessário.";
+        
+        let currentUser = null, userProfileData = null, chatHistory = [];
+        let authReady = false, activePage = 'home';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const provider = new GoogleAuthProvider();
+        setPersistence(auth, browserLocalPersistence);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            setupNavigation();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('loginWithGoogle').addEventListener('click', loginWithGoogle);
+            document.getElementById('menuBtn').addEventListener('click', toggleMenu);
+            document.getElementById('sideMenuOverlay').addEventListener('click', toggleMenu);
+            document.getElementById('cameraBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+            document.getElementById('galleryBtn').addEventListener('click', () => document.getElementById('galleryInput').click());
+            document.querySelectorAll('.quick-function-btn').forEach(btn => btn.addEventListener('click', () => document.getElementById('fileInput').click()));
+            document.getElementById('pdf-writer-btn').addEventListener('click', () => document.getElementById('pdf-form-modal').classList.remove('hidden'));
+            document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
+            document.getElementById('new-chat-btn').addEventListener('click', startNewChat);
+            document.getElementById('chat-input').addEventListener('keyup', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+            document.getElementById('logoutButton').addEventListener('click', logoutUser);
+            document.getElementById('logoutButtonSideMenu').addEventListener('click', logoutUser);
+            document.getElementById('pdf-form-cancel-btn').addEventListener('click', () => document.getElementById('pdf-form-modal').classList.add('hidden'));
+            document.getElementById('pdf-generation-form').addEventListener('submit', handlePdfFormSubmit);
+            document.getElementById('pdf-download-btn').addEventListener('click', generateAndDownloadPdf);
+            document.getElementById('pdf-cancel-btn').addEventListener('click', () => document.getElementById('pdf-editor-modal').classList.add('hidden'));
+            document.querySelector('.editor-toolbar').addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (button) {
+                    const command = button.dataset.command;
+                    document.execCommand(command, false, null);
+                    document.getElementById('pdf-editor-content').focus();
+                }
+            });
+            document.getElementById('jobs-list').addEventListener('click', (e) => {
+                const toggleBtn = e.target.closest('.job-toggle-btn');
+                const editBtn = e.target.closest('.job-edit-pdf-btn');
+                const downloadBtn = e.target.closest('.job-download-pdf-btn');
+                if (toggleBtn) toggleJobDetails(toggleBtn);
+                if (editBtn) openPdfEditor(editBtn);
+                if (downloadBtn) downloadPdfDirectly(downloadBtn);
+            });
+            document.getElementById('chat-messages').addEventListener('click', (e) => {
+                const messageBubble = e.target.closest('.message-bubble');
+                if(messageBubble) copyToClipboard(messageBubble.innerText);
+            });
+            document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+            document.getElementById('galleryInput').addEventListener('change', handleFileUpload);
+        }
+        
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                const userProfileRef = ref(db, 'users/' + user.uid);
+                onValue(userProfileRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        const username = user.displayName ? user.displayName.split(' ')[0] : user.email.split('@')[0];
+                        const initialProfile = {
+                            username: username.replace(/[^a-zA-Z0-9]/g, ''),
+                            email: user.email,
+                            createdAt: serverTimestamp()
+                        };
+                        set(userProfileRef, initialProfile).then(() => {
+                            userProfileData = initialProfile;
+                            initializeAppUI();
+                        });
+                    } else {
+                        userProfileData = snapshot.val();
+                        initializeAppUI();
+                    }
+                }, { onlyOnce: true });
+            } else {
+                currentUser = null; userProfileData = null;
+                showScreen('loginOverlay');
+                finishInitialLoad();
+            }
+        });
+        
+        function initializeAppUI() {
+            if (authReady) {
+                 updateProfileUI(userProfileData);
+            } else {
+                showScreen('appContent');
+                updateProfileUI(userProfileData);
+                finishInitialLoad();
+            }
+        }
+
+        function finishInitialLoad() {
+            if (authReady) return;
+            authReady = true;
+            const loader = document.getElementById('initial-loading-overlay');
+            loader.classList.add('animate-fadeOut');
+            setTimeout(() => loader.classList.add('hidden'), 500);
+        }
+
+        function showScreen(elementId) {
+            document.querySelectorAll('.screen').forEach(el => {
+                if(el.id !== elementId) {
+                    el.classList.add('opacity-0');
+                    setTimeout(() => el.classList.add('hidden'), 500);
+                }
+            });
+            const targetEl = document.getElementById(elementId);
+            if (targetEl) {
+                targetEl.classList.remove('hidden');
+                setTimeout(() => targetEl.classList.remove('opacity-0'), 20);
+            }
+        }
+
+        function loginWithGoogle() {
+            const btn = document.getElementById('loginWithGoogle');
+            const btnText = document.getElementById('login-btn-text');
+            const errorMessage = document.getElementById('auth-error-message');
+            btn.disabled = true;
+            btnText.textContent = 'Autenticando...';
+            errorMessage.textContent = '';
+            
+            signInWithPopup(auth, provider)
+              .then(() => {
+                window.location.reload();
+              })
+              .catch(err => {
+                errorMessage.textContent = err.code === 'auth/popup-closed-by-user' ? "A janela de login foi fechada." : "Ocorreu um erro no login.";
+                 btn.disabled = false; 
+                 btnText.textContent = 'Entrar com Google';
+              });
+        };
+        
+        function logoutUser() {
+            document.getElementById('appContent').classList.add('animate-fadeOut');
+            setTimeout(() => signOut(auth), 400);
+        };
+        
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const icons = {
+                home: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h7.5" /></svg>`,
+                jobs: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 2.25a2.25 2.25 0 012.25 2.25v1.506a2.25 2.25 0 01-1.125 1.957l-1.928.964A2.25 2.25 0 007.5 11.25v2.535A2.25 2.25 0 009.428 15.75l1.928.964A2.25 2.25 0 0112.5 18.75v1.506a2.25 2.25 0 01-2.25 2.25H4.5A2.25 2.25 0 012.25 20.25V4.5A2.25 2.25 0 014.5 2.25h5z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12.5 6h5.25a2.25 2.25 0 012.25 2.25v1.5a2.25 2.25 0 01-2.25 2.25h-5.25V6zM12.5 15h5.25a2.25 2.25 0 012.25 2.25v1.5a2.25 2.25 0 01-2.25 2.25h-5.25V15z" /></svg>`,
+                chat: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72 3.72a1.125 1.125 0 01-1.59 0l-3.72-3.72a2.122 2.122 0 01-1.98-2.193v-4.286c0-.97.616-1.813 1.5-2.097m6.75 0a48.667 48.667 0 00-7.5 0" /></svg>`,
+                profile: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`
+            };
+            const filledIcons = {
+                home: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z" /><path d="M12 5.432l8.159 8.159c.026.026.05.054.07.084v6.101a2.25 2.25 0 01-2.25 2.25H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.25a2.25 2.25 0 01-2.25-2.25v-6.101c.02-.03.044-.058.07-.084L12 5.432z" /></svg>`,
+                jobs: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5.625 3h12.75a3.375 3.375 0 013.375 3.375v14.25a3.375 3.375 0 01-3.375 3.375H5.625A3.375 3.375 0 012.25 20.625V6.375A3.375 3.375 0 015.625 3zM9.75 12a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" /><path d="M11.25 5.25a1.5 1.5 0 00-3 0v.75a.75.75 0 001.5 0V6a.75.75 0 01.75-.75h.75a.75.75 0 01.75.75v.75a.75.75 0 001.5 0v-.75a1.5 1.5 0 00-3 0V5.25z" /></svg>`,
+                chat: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.848 2.771A49.144 49.144 0 0112 2.25c2.43 0 4.817.178 7.152.521 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97-1.033.153-2.14.26-3.28.326a.75.75 0 01-.33.89l-2.755 1.653a.75.75 0 01-1.12 0l-2.755-1.653a.75.75 0 01-.33-.89c-1.14-.066-2.247-.173-3.28-.326C1.87 16.26 1.5 14.53 1.5 12.58V6.56c0-1.946 1.37-3.678 3.348-3.79zM7.5 9a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V9.75A.75.75 0 017.5 9zm4.5 0a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75h-.008a.75.75 0 01-.75-.75V9.75a.75.75 0 01.75-.75h.008zM15 9.75a.75.75 0 00-.75-.75h-.008a.75.75 0 00-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 00.75-.75V9.75z" clip-rule="evenodd" /></svg>`,
+                profile: `<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" /></svg>`
+            };
+            
+            navButtons.forEach(button => {
+                const targetId = button.dataset.target;
+                button.querySelector('.icon-container').innerHTML = icons[targetId];
+                button.addEventListener('click', (e) => {
+                    const currentTarget = e.currentTarget;
+                    navButtons.forEach(btn => {
+                        btn.classList.remove('text-primary'); btn.classList.add('text-gray-400');
+                        btn.querySelector('.icon-container').innerHTML = icons[btn.dataset.target];
+                    });
+                    currentTarget.classList.add('text-primary');
+                    currentTarget.querySelector('.icon-container').innerHTML = filledIcons[currentTarget.dataset.target];
+                    navigateTo(currentTarget.dataset.target);
+                });
+            });
+            document.querySelector('.nav-btn[data-target="home"] .icon-container').innerHTML = filledIcons.home;
+        }
+
+        function navigateTo(pageId) {
+            if (activePage === pageId) return;
+            document.getElementById(`page-${activePage}`).classList.remove('active');
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            activePage = pageId;
+
+            if (pageId === 'jobs') renderJobs();
+            if (pageId === 'chat') loadChatHistory();
+        }
+        
+        function showCustomConfirm(message, title = 'Confirmar Ação') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('custom-confirm-modal');
+                const msgEl = document.getElementById('custom-confirm-message');
+                const titleEl = document.getElementById('custom-confirm-title');
+                const okBtn = document.getElementById('custom-confirm-ok-btn');
+                const cancelBtn = document.getElementById('custom-confirm-cancel-btn');
+
+                msgEl.textContent = message;
+                titleEl.textContent = title;
+                modal.classList.remove('hidden');
+
+                const handleOk = () => {
+                    modal.classList.add('hidden');
+                    resolve(true);
+                    cleanup();
+                };
+
+                const handleCancel = () => {
+                    modal.classList.add('hidden');
+                    resolve(false);
+                    cleanup();
+                };
+
+                const cleanup = () => {
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                };
+
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+            });
+        }
+        
+        async function startNewChat() {
+            const confirmed = await showCustomConfirm(
+                'Tem certeza que deseja apagar todo o histórico e começar uma nova conversa?',
+                'Limpar Conversa'
+            );
+
+            if (confirmed) {
+                const chatRef = ref(db, `chats/${currentUser.uid}`);
+                try {
+                    await remove(chatRef);
+                    chatHistory = [];
+                    document.getElementById('chat-messages').innerHTML = '';
+                    addMessageToChat({role: 'assistant', content: 'Ok, memória apagada! ✨ Do que vamos falar agora?'});
+                    showToast('Nova conversa iniciada!', 'success');
+                } catch (error) {
+                    console.error("Failed to clear chat:", error);
+                    showToast('Erro ao limpar a conversa.', 'error');
+                }
+            }
+        }
+        
+        async function loadChatHistory() {
+            if (!currentUser) return;
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.innerHTML = `<div class="text-center p-8 text-sm text-gray-500 flex items-center justify-center gap-2"><svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Carregando histórico...</div>`;
+            
+            // ALTERAÇÃO: Adicionado try-catch para lidar com erros de carregamento e não travar na tela de "Carregando".
+            try {
+                const chatRef = query(ref(db, `chats/${currentUser.uid}`), orderByChild('timestamp'));
+                const snapshot = await get(chatRef);
+                
+                messagesContainer.innerHTML = ''; 
+                chatHistory = [];
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const message = child.val(); 
+                        chatHistory.push(message); 
+                        addMessageToChat(message);
+                    });
+                } else {
+                     addMessageToChat({role: 'assistant', content: 'E aí! Sou a Jinoca. Me pergunte qualquer coisa. 😎'});
+                }
+            } catch (error) {
+                console.error("Falha ao carregar o histórico do chat:", error);
+                messagesContainer.innerHTML = `<div class="p-4 text-center text-sm text-red-500">Ocorreu um erro ao carregar o histórico. Por favor, tente novamente.</div>`;
+            }
+        }
+        
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const messageText = input.value.trim();
+            if (!messageText || !currentUser) return;
+            input.value = '';
+            
+            const userMessage = { role: "user", content: messageText, timestamp: serverTimestamp() };
+            addMessageToChat(userMessage);
+            chatHistory.push(userMessage);
+            push(ref(db, `chats/${currentUser.uid}`), userMessage);
+            
+            addMessageToChat({ role: 'assistant', content: null });
+            
+            try {
+                const messagesForAPI = [{ role: "system", content: JINOCA_SYSTEM_PROMPT }, ...chatHistory.slice(-10).map(m => ({ role: m.role, content: m.content }))];
+                const rawResponse = await getAIResponse(API_URL_CHAT, OBFUSCATED_KEY_CHAT, "openai/gpt-oss-20b", messagesForAPI);
+                const assistantMessage = { role: "assistant", content: rawResponse, timestamp: serverTimestamp() };
+                chatHistory.push(assistantMessage);
+                push(ref(db, `chats/${currentUser.uid}`), assistantMessage);
+                await typeOutResponse(assistantMessage.content);
+            } catch (error) {
+                console.error("Chat Error:", error);
+                await typeOutResponse("Oops, meu cérebro de IA deu um tilt. 😵 Tente de novo.");
+            }
+        }
+        
+        function addMessageToChat({ role, content }) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-end gap-2 message-container ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const bubbleHtml = `
+                <div class="${role === 'user' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-800'} p-3 rounded-2xl max-w-xs prose message-bubble cursor-pointer" ${content === null ? 'id="last-ai-message"' : ''}>
+                    ${content ? markdownToHtml(content) : '<div class="flex space-x-1"><div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]"></div></div>'}
+                </div>
+            `;
+            
+            if (role === 'assistant') {
+                const avatarHtml = `
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </div>
+                `;
+                messageDiv.innerHTML = avatarHtml + bubbleHtml;
+            } else {
+                messageDiv.innerHTML = bubbleHtml;
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function typeOutResponse(text) {
+            const lastMessageEl = document.getElementById('last-ai-message');
+            if (!lastMessageEl) return;
+            lastMessageEl.innerHTML = "";
+            lastMessageEl.id = '';
+            
+            const words = text.split(' ');
+            for (let i = 0; i < words.length; i++) {
+                lastMessageEl.innerHTML += (i > 0 ? ' ' : '') + words[i];
+                lastMessageEl.parentElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            lastMessageEl.innerHTML = markdownToHtml(text);
+        }
+
+        // --- Funções restantes (sem alterações críticas) ---
+
+        function toggleMenu() {
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('sideMenuOverlay');
+            const isHidden = sideMenu.classList.contains('hidden');
+            sideMenu.classList.toggle('hidden', !isHidden); 
+            overlay.classList.toggle('hidden', !isHidden);
+            setTimeout(() => sideMenu.style.transform = isHidden ? 'translateX(0)' : 'translateX(-100%)', 10);
+        };
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-gray-800');
+            toast.className = `animate-fadeIn fixed top-24 left-1/2 -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg text-sm z-[999] shadow-lg`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.classList.add('animate-fadeOut'); toast.addEventListener('animationend', () => toast.remove()); }, 3000);
+        }
+        
+        async function getAIResponse(apiUrl, apiKey, model, messages) { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${atob(apiKey)}` }, body: JSON.stringify({ model, messages, temperature: 1, max_tokens: 4096 }) }); if (!response.ok) throw new Error(`API Error: ${response.status}`); const json = await response.json(); if (!json.choices || json.choices.length === 0) throw new Error("Invalid API response"); return json.choices[0].message.content; }
+        
+        async function getStructuredAIResponse(promptText, content) { 
+            const messages = [{ role: "system", content: "Você responde APENAS com o objeto JSON solicitado, sem nenhum texto adicional, explicação ou markdown." }, { role: "user", content: content ? `${promptText}\n\n${content}` : promptText }]; 
+            const rawText = await getAIResponse(API_URL_MAIN, OBFUSCATED_KEY_MAIN, "openai/gpt-oss-20b", messages); 
+            try { 
+                const cleanedText = rawText.match(/\{[\s\S]*\}/)?.[0] || '{}';
+                return JSON.parse(cleanedText); 
+            } catch (e) { 
+                console.error("JSON Parse Error:", e, "Raw Text:", rawText); 
+                throw new Error("Failed to parse AI response."); 
+            } 
+        }
+
+        async function handleFileUpload(event) { 
+            const file = event.target.files[0]; if (!file) return; 
+            event.target.value = ''; 
+            const jobRef = push(ref(db, `jobs/${currentUser.uid}`)); 
+            const job = { id: jobRef.key, status: 'processing', progress: 10, createdAt: serverTimestamp(), type: 'exercise', question: `Exercício: ${file.name}` }; 
+            await set(jobRef, job); 
+            navigateTo('jobs');
+            showToast("Seu trabalho começou! Acompanhe o progresso aqui.");
+            
+            (async () => {
+                try { 
+                    await update(jobRef, { progress: 20 }); 
+                    const worker = await Tesseract.createWorker('por'); 
+                    const { data: { text } } = await worker.recognize(file); 
+                    await worker.terminate(); 
+                    await update(jobRef, { progress: 50 }); 
+                    const prompt = "Analise a seguinte questão. Retorne um JSON com as chaves 'question' (um resumo da pergunta), 'answer' (a resposta completa em HTML) e 'type' ('math', 'text', etc.)."; 
+                    const { question, answer, type } = await getStructuredAIResponse(prompt, text); 
+                    await update(jobRef, { status: 'completed', progress: 100, question, answer, resultType: type }); 
+                } catch (error) { 
+                    console.error("Job failed:", error);
+                    await update(jobRef, { status: 'failed', progress: 100, error: error.message }); 
+                }
+            })();
+        }
+        
+        async function handlePdfFormSubmit(e) {
+            e.preventDefault();
+            document.getElementById('pdf-form-modal').classList.add('hidden');
+            const topic = document.getElementById('pdf-topic').value;
+            const tone = document.getElementById('pdf-tone').value;
+            const style = document.getElementById('pdf-style').value;
+            const audience = document.getElementById('pdf-audience').value;
+            
+            const jobRef = push(ref(db, `jobs/${currentUser.uid}`));
+            const job = { id: jobRef.key, status: 'processing', progress: 10, type: 'pdf', question: `PDF sobre: ${topic}`, createdAt: serverTimestamp() };
+            await set(jobRef, job);
+            navigateTo('jobs');
+            showToast("Gerando seu PDF! Acompanhe o progresso aqui.");
+            
+            const pdfPrompt = `Escreva um texto no estilo "${style}" sobre "${topic}". O tom deve ser ${tone} e o público-alvo são ${audience}. Formate o texto usando tags HTML básicas como <strong>, <em>, <ul>, <ol>, <li> e <p>. Organize bem o conteúdo com parágrafos.`;
+            
+            (async () => {
+                try {
+                    await update(jobRef, { progress: 40 });
+                    const rawText = await getAIResponse(API_URL_MAIN, OBFUSCATED_KEY_MAIN, "openai/gpt-oss-20b", [{ role: "user", content: pdfPrompt }]);
+                    await update(jobRef, { status: 'completed', progress: 100, answer: rawText, resultType: 'pdf' });
+                } catch (error) {
+                    console.error("PDF Job failed:", error);
+                    await update(jobRef, { status: 'failed', progress: 100, error: error.message });
+                }
+            })();
+        }
+
+        function openPdfEditor(button) {
+            const jobData = JSON.parse(button.dataset.job);
+            const modal = document.getElementById('pdf-editor-modal');
+            const editor = document.getElementById('pdf-editor-content');
+            const downloadBtn = document.getElementById('pdf-download-btn');
+            
+            editor.innerHTML = jobData.answer || "<p>Não foi possível carregar o texto.</p>";
+            downloadBtn.dataset.topic = jobData.question;
+            modal.classList.remove('hidden');
+        }
+
+        async function downloadPdfDirectly(button) {
+            const jobData = JSON.parse(button.dataset.job);
+            const originalHTML = button.innerHTML;
+            button.innerHTML = `<svg class="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            button.disabled = true;
+
+            const topic = (jobData.question || "documento").replace('PDF sobre: ', '');
+            const filename = `${topic.replace(/ /g, '_')}.pdf`;
+            
+            const contentWrapper = document.createElement('div');
+            contentWrapper.innerHTML = jobData.answer;
+            contentWrapper.style.padding = '1rem';
+            contentWrapper.style.whiteSpace = 'pre-wrap';
+
+            const opt = { margin: 1, filename: filename, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }};
+            
+            try {
+                await html2pdf().from(contentWrapper).set(opt).save();
+            } finally {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }
+        }
+
+        async function generateAndDownloadPdf() {
+            const editor = document.getElementById('pdf-editor-content');
+            const downloadBtn = document.getElementById('pdf-download-btn');
+            const originalHTML = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = 'Baixando...';
+            downloadBtn.disabled = true;
+
+            const topic = (downloadBtn.dataset.topic || "documento").replace('PDF sobre: ', '');
+            const filename = `${topic.replace(/ /g, '_')}.pdf`;
+            
+            const opt = { margin: 1, filename: filename, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }};
+            
+            try {
+                await html2pdf().from(editor).set(opt).save();
+                document.getElementById('pdf-editor-modal').classList.add('hidden');
+            } finally {
+                downloadBtn.innerHTML = originalHTML;
+                downloadBtn.disabled = false;
+            }
+        }
+        
+        function renderJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            const jobsRef = query(ref(db, `jobs/${currentUser.uid}`), orderByChild('createdAt'));
+            onValue(jobsRef, (snapshot) => {
+                jobsList.innerHTML = '';
+                const jobs = [];
+                snapshot.forEach(child => { jobs.unshift({ id: child.key, ...child.val() }); });
+                if (jobs.length === 0) { jobsList.innerHTML = '<p class="text-center text-gray-500 py-8">Nenhum trabalho encontrado.</p>'; return; }
+                jobs.forEach(job => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-white p-4 rounded-lg shadow-sm overflow-hidden';
+                    let actionButtons = `<button data-job-id="${job.id}" class="job-toggle-btn text-sm text-primary">Ver Detalhes</button>`;
+                    if (job.status === 'completed' && job.resultType === 'pdf') {
+                        actionButtons += `
+                            <button data-job='${JSON.stringify(job)}' class="job-edit-pdf-btn text-sm bg-gray-200 text-gray-700 px-3 py-1 rounded-md ml-2">Editar PDF</button>
+                            <button data-job='${JSON.stringify(job)}' class="job-download-pdf-btn text-sm bg-primary text-white px-3 py-1 rounded-md ml-2">Baixar PDF</button>
+                        `;
+                    }
+                    let progressBar = '';
+                    if (job.status === 'processing') {
+                        progressBar = `<div class="w-full bg-gray-200 rounded-full h-2 mt-2"><div class="bg-primary h-2 rounded-full transition-all duration-300 progress-bar-striped animate-progress-bar-stripes" style="width: ${job.progress || 0}%"></div></div>`;
+                    }
+                    el.innerHTML = `<div class="flex justify-between items-center"><p class="font-bold text-gray-700 break-all">${job.question || 'Trabalho'}</p><span class="text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 ${job.status === 'completed' ? 'bg-green-100 text-green-700' : (job.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')}">${job.status}</span></div>${progressBar}<div class="mt-4 pt-4 border-t hidden break-words" id="job-result-${job.id}"><div class="prose prose-sm max-w-full">${job.answer || (job.error || 'Sem detalhes.')}</div></div><div class="mt-4 text-right">${actionButtons}</div>`;
+                    jobsList.appendChild(el);
+                });
+            });
+        }
+        function toggleJobDetails(button) {
+            const jobId = button.dataset.jobId;
+            const resultDiv = document.getElementById(`job-result-${jobId}`);
+            const isHidden = resultDiv.classList.contains('hidden');
+            resultDiv.classList.toggle('hidden');
+            button.textContent = isHidden ? "Ocultar Detalhes" : "Ver Detalhes";
+        }
+
+        function updateProfileUI(profile) {
+            if (!profile || !currentUser) return;
+            const avatarData = createInitialAvatar(currentUser.uid, profile.email || 'A@B.com');
+            applyAvatar('userAvatar', avatarData);
+            applyAvatar('profileAvatar', avatarData);
+            document.getElementById('profileName').textContent = profile.username || 'Usuário';
+        }
+
+        function createInitialAvatar(userId, email) {
+            const colors = ['#f59e0b', '#ef4444', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
+            let hash = 0;
+            for (let i = 0; i < userId.length; i++) {
+                hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const colorIndex = Math.abs(hash % colors.length);
+            return {
+                bgColor: colors[colorIndex],
+                initial: email.charAt(0).toUpperCase()
+            };
+        }
+
+        function applyAvatar(elementId, avatarData) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.style.backgroundColor = avatarData.bgColor;
+            el.innerHTML = `<span class="flex items-center justify-center h-full w-full text-white font-bold">${avatarData.initial}</span>`;
+            if(elementId === 'userAvatar') el.querySelector('span').classList.add('text-sm');
+        }
+
+        function markdownToHtml(text) { 
+            if (!text) return ''; 
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-2 rounded-md text-sm"><code>$1</code></pre>')
+                .replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-sm rounded px-1 py-0.5">$1</code>')
+                .replace(/\n/g, '<br>'); 
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Mensagem copiada!', 'success');
+            }).catch(err => {
+                console.error('Falha ao copiar: ', err);
+            });
+        }
+    </script>
+</body>
+</html>
