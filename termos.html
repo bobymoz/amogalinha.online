@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CABULA - Termos e Privacidade</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+            transition: background-color 0.3s;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            overflow: auto;
+            padding: 0 2rem;
+        }
+
+        .header {
+            background: #1f1f1f;
+            color: #fff;
+            padding: 2rem 0;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #aaa;
+        }
+        
+        .lang-switcher {
+            margin-top: 1.5rem;
+        }
+
+        .lang-btn {
+            background: none;
+            border: 1px solid #444;
+            color: #aaa;
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 400;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn:hover {
+            background: #007BFF;
+            color: #fff;
+            border-color: #007BFF;
+        }
+        
+        .lang-btn.active {
+            background: #007BFF;
+            color: #fff;
+            border-color: #007BFF;
+            font-weight: 700;
+        }
+
+        .main-content {
+            background: #1f1f1f;
+            padding: 2.5rem;
+            margin-top: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        h2 {
+            color: #fff;
+            border-bottom: 2px solid #007BFF;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        p, ul {
+            margin-bottom: 1rem;
+            font-weight: 300;
+            text-align: justify;
+            color: #ccc;
+        }
+        
+        strong {
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 2rem;
+            color: #777;
+            font-size: 0.9rem;
+        }
+        
+        /* Oculta o conteúdo do idioma não selecionado */
+        .language-content:not(.active) {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="container">
+            <h1>CABULA</h1>
+            <p>Termos de Serviço e Política de Privacidade</p>
+            <div class="lang-switcher">
+                <button id="btn-pt" class="lang-btn active" onclick="switchLanguage('pt')">Português</button>
+                <button id="btn-en" class="lang-btn" onclick="switchLanguage('en')">English</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Conteúdo em Português -->
+        <div id="pt-content" class="language-content active">
+            <section class="main-content">
+                <h2>Termos e Condições de Uso</h2>
+                <p><strong>BEM-VINDO!</strong> Estes termos e condições descrevem as regras de uso deste aplicativo, desenvolvido e fornecido pela empresa <strong>amogalinha</strong>. Ao acessar e utilizar nosso aplicativo, você aceita e concorda em estar vinculado a estes termos na íntegra. Não continue a usar este aplicativo se não concordar com todos os termos e condições estabelecidos nesta página.</p>
+                <p><strong>1. Licença de Uso:</strong> É concedida permissão para baixar temporariamente uma cópia dos materiais (informações ou software) no aplicativo, apenas para visualização transitória pessoal e não comercial. Esta é a concessão de uma licença, não uma transferência de título, e sob esta licença você não pode: modificar ou copiar os materiais; usar os materiais para qualquer finalidade comercial ou para exibição pública; tentar descompilar ou fazer engenharia reversa de qualquer software contido no aplicativo.</p>
+                <p><strong>2. Propriedade Intelectual:</strong> Todo o conteúdo, incluindo, mas não se limitando a, textos, gráficos, logotipos, ícones, imagens, clipes de áudio, downloads digitais e software, é propriedade da <strong>amogalinha</strong> ou de seus fornecedores de conteúdo e é protegido pelas leis de direitos autorais internacionais. A compilação de todo o conteúdo deste aplicativo é propriedade exclusiva da <strong>amogalinha</strong>.</p>
+                <p><strong>3. Isenção de Responsabilidade:</strong> Os materiais no aplicativo são fornecidos 'como estão'. A <strong>amogalinha</strong> não oferece garantias, expressas ou implícitas, e por este meio se isenta e nega todas as outras garantias. Além disso, a <strong>amogalinha</strong> não garante ou faz qualquer representação relativa à precisão, aos resultados prováveis ou à confiabilidade do uso dos materiais em seu aplicativo ou de outra forma relacionado a esses materiais ou em sites vinculados a este aplicativo.</p>
+                <p><strong>4. Modificações dos Termos:</strong> A <strong>amogalinha</strong> pode revisar estes termos de uso do aplicativo a qualquer momento, sem aviso prévio. Ao usar este aplicativo, você concorda em ficar vinculado à versão atual destes termos e condições de uso.</p>
+            </section>
+
+            <section class="main-content">
+                <h2>Política de Privacidade</h2>
+                <p>A sua privacidade é importante para nós. É política da <strong>amogalinha</strong> respeitar a sua privacidade em relação a qualquer informação sua que possamos coletar em nosso aplicativo.</p>
+                <p><strong>1. Coleta de Informações:</strong> Solicitamos informações pessoais apenas quando realmente precisamos delas para lhe fornecer um serviço. Fazemo-lo por meios justos e legais, com o seu conhecimento e consentimento. Também informamos por que estamos coletando e como será usado. As informações que podemos coletar incluem, mas não se limitam a, dados de uso, informações do dispositivo e informações fornecidas voluntariamente por você.</p>
+                <p><strong>2. Uso das Informações:</strong> Usamos as informações coletadas para operar e manter nosso aplicativo, entender e analisar como você utiliza nossos serviços, desenvolver novos produtos, serviços e funcionalidades, e para nos comunicarmos com você, seja diretamente ou através de um de nossos parceiros, incluindo para atendimento ao cliente, para fornecer atualizações e outras informações relacionadas ao aplicativo e para fins de marketing e promocionais.</p>
+                <p><strong>3. Segurança dos Dados:</strong> A segurança dos seus dados é importante para nós, mas lembre-se que nenhum método de transmissão pela Internet ou método de armazenamento eletrônico é 100% seguro. Embora nos esforcemos para usar meios comercialmente aceitáveis para proteger suas informações pessoais, não podemos garantir sua segurança absoluta.</p>
+                <p><strong>4. Links para Outros Sites:</strong> Nosso aplicativo pode conter links para outros sites que não são operados por nós. Se você clicar em um link de terceiros, será direcionado para o site desse terceiro. Aconselhamos vivamente que reveja a Política de Privacidade de todos os sites que visitar. Não temos controle e não assumimos responsabilidade pelo conteúdo, políticas de privacidade ou práticas de quaisquer sites ou serviços de terceiros.</p>
+            </section>
+        </div>
+
+        <!-- Conteúdo em Inglês -->
+        <div id="en-content" class="language-content">
+            <section class="main-content">
+                <h2>Terms and Conditions of Use</h2>
+                <p><strong>WELCOME!</strong> These terms and conditions outline the rules and regulations for the use of this application, developed and provided by <strong>amogalinha</strong>. By accessing and using our application, you accept and agree to be bound by these terms in full. Do not continue to use this application if you do not agree to all of the terms and conditions stated on this page.</p>
+                <p><strong>1. Use License:</strong> Permission is granted to temporarily download one copy of the materials (information or software) on the application for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not: modify or copy the materials; use the materials for any commercial purpose, or for any public display; attempt to decompile or reverse engineer any software contained in the application.</p>
+                <p><strong>2. Intellectual Property:</strong> All content included on the app, such as text, graphics, logos, button icons, images, audio clips, digital downloads, and software, is the property of <strong>amogalinha</strong> or its content suppliers and protected by international copyright laws. The compilation of all content on this app is the exclusive property of <strong>amogalinha</strong>.</p>
+                <p><strong>3. Disclaimer:</strong> The materials on the application are provided 'as is'. <strong>amogalinha</strong> makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties. Furthermore, <strong>amogalinha</strong> does not warrant or make any representations concerning the accuracy, likely results, or reliability of the use of the materials on its application or otherwise relating to such materials or on any sites linked to this application.</p>
+                <p><strong>4. Modifications to Terms:</strong> <strong>amogalinha</strong> may revise these terms of use for its application at any time without notice. By using this application you are agreeing to be bound by the then current version of these terms and conditions of use.</p>
+            </section>
+            
+            <section class="main-content">
+                <h2>Privacy Policy</h2>
+                <p>Your privacy is important to us. It is <strong>amogalinha</strong>'s policy to respect your privacy regarding any information we may collect from you across our application.</p>
+                <p><strong>1. Information Collection:</strong> We ask for personal information only when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we’re collecting it and how it will be used. Information we may collect includes, but is not limited to, usage data, device information, and information voluntarily provided by you.</p>
+                <p><strong>2. Use of Information:</strong> We use the information we collect to operate and maintain our application, understand and analyze how you use our services, develop new products, services, and features, and to communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the app, and for marketing and promotional purposes.</p>
+                <p><strong>3. Data Security:</strong> The security of your data is important to us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your personal information, we cannot guarantee its absolute security.</p>
+                <p><strong>4. Links to Other Sites:</strong> Our application may contain links to other sites that are not operated by us. If you click on a third-party link, you will be directed to that third party's site. We strongly advise you to review the Privacy Policy of every site you visit. We have no control over and assume no responsibility for the content, privacy policies or practices of any third-party sites or services.</p>
+            </section>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 amogalinha. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        function switchLanguage(lang) {
+            // Esconde todos os blocos de conteúdo
+            document.querySelectorAll('.language-content').forEach(function(el) {
+                el.classList.remove('active');
+            });
+
+            // Remove a classe 'active' de todos os botões
+            document.querySelectorAll('.lang-btn').forEach(function(el) {
+                el.classList.remove('active');
+            });
+
+            // Mostra o bloco de conteúdo do idioma selecionado
+            document.getElementById(lang + '-content').classList.add('active');
+            
+            // Adiciona a classe 'active' ao botão clicado
+            document.getElementById('btn-' + lang).classList.add('active');
+        }
+    </script>
+
+</body>
+</html>
