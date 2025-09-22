@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cabula Escolar</title>
+    <!-- Preconnect to Google Fonts for faster loading -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], pacifico: ['Pacifico', 'cursive'] },
+                    colors: { primary: '#6366f1', secondary: '#f59e0b', correct: '#22c55e', incorrect: '#ef4444', dark: '#374151' },
+                    borderRadius: { '4xl': '2rem' },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        fadeOut: { '0%': { opacity: '1' }, '100%': { opacity: '0' } },
+                        slideInUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        pulseRing: { '0%': { transform: 'scale(0.8)', opacity: '0.5' }, '80%': { transform: 'scale(1.5)', opacity: '0' }, '100%': { transform: 'scale(1.5)', opacity: '0' } },
+                        'progress-bar-stripes': { from: { 'background-position': '1rem 0' }, to: { 'background-position': '0 0' } }
+                    },
+                    animation: {
+                        fadeIn: 'fadeIn 0.4s ease-in-out forwards',
+                        fadeOut: 'fadeOut 0.4s ease-in-out forwards',
+                        slideInUp: 'slideInUp 0.3s ease-out forwards',
+                        pulseRing: 'pulseRing 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                        'progress-bar-stripes': 'progress-bar-stripes 1s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    
+    <!-- Google Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <style>
+        html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+        .pacifico { font-family: 'Pacifico', cursive; }
+        .page { display: none; height: 100%; }
+        .page.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out; }
+        .page-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48; }
+        .message-bubble { cursor: pointer; overflow-wrap: break-word; word-break: break-word; }
+        body.keyboard-open #appContent > header, body.keyboard-open #appContent > nav, body.keyboard-open #ad-banner-container { display: none; }
+        body.keyboard-open main { height: 100%; }
+        .editor-toolbar button { padding: 0.5rem; border-radius: 0.375rem; transition: background-color 0.2s; }
+        .editor-toolbar button:hover { background-color: #e5e7eb; }
+        .editor-toolbar button.active { background-color: #d1d5db; }
+        #pdf-editor-content:focus { outline: none; box-shadow: 0 0 0 2px #6366f1; }
+        #chat-input { resize: none; overflow-y: hidden; }
+        .custom-select-container { position: relative; }
+        .custom-select-options { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: white; border: 1px solid #e5e7eb; border-radius: 0.5rem; max-height: 200px; overflow-y: auto; z-index: 10; margin-top: 4px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .custom-select-option { padding: 0.75rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
+        .custom-select-option:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-200 antialiased">
+    
+    <div id="initial-loading-overlay" class="fixed inset-0 bg-white z-[101] flex items-center justify-center">
+        <div class="flex space-x-2"><div class="w-3 h-3 bg-primary rounded-full animate-bounce"></div><div class="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:0.2s]"></div><div class="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:0.4s]"></div></div>
+    </div>
+
+    <div id="welcomeOverlay" class="screen fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center p-8 text-center hidden">
+        <div class="w-full max-w-sm animate-slideInUp">
+            <h1 class="pacifico text-6xl text-primary mb-3">Cabula</h1>
+            <p class="text-gray-700 mb-2 text-lg">Sua assistente de estudos com IA.</p>
+            <p class="text-gray-500 mb-10 text-base">Tire fotos de exercícios, gere textos completos e converse com a Jinoca, nossa IA especialista.</p>
+            <button id="continue-btn" class="w-full bg-dark text-white font-bold py-4 px-4 rounded-xl hover:bg-gray-800 transition-transform hover:scale-105 shadow-lg">Continuar</button>
+            <p class="text-xs text-gray-400 mt-6 px-4">Ao clicar em continuar, você concorda que leu e aceitou os <a href="https://amogalinhha.online/termos.html" target="_blank" class="underline hover:text-primary">Termos e Condições</a>.</p>
+        </div>
+    </div>
+    
+    <div class="relative h-full w-full max-w-md mx-auto flex flex-col">
+        <div id="appContent" class="screen hidden bg-gray-50 flex-1 flex flex-col h-full z-10 shadow-2xl overflow-hidden">
+            <header class="flex-shrink-0 w-full bg-white/95 shadow-sm z-50 h-20 flex items-center">
+                <div class="px-4 w-full flex items-center justify-between">
+                    <div class="w-10 h-10 flex items-center justify-start">
+                        <button id="backBtn" class="w-8 h-8 flex items-center justify-center hidden"><span class="material-symbols-outlined text-gray-600">arrow_back</span></button>
+                    </div>
+                    <h1 id="header-title" class="pacifico text-3xl text-primary text-center">Cabula</h1>
+                    <div class="w-10 h-10 flex items-center justify-end">
+                        <button id="resetButton" class="w-8 h-8 flex items-center justify-center" title="Apagar todos os dados"><span class="material-symbols-outlined text-gray-600">delete_sweep</span></button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 flex flex-col overflow-hidden">
+                <div id="page-home" class="page active page-content">
+                    <section class="text-center mb-8"><h2 class="text-2xl font-bold text-gray-800 mb-2">Resolva exercícios em segundos</h2><p class="text-gray-600 text-sm">Envie uma foto e receba a resposta</p></section>
+                    <section class="mb-8"><div class="relative flex justify-center items-center"><div class="absolute w-32 h-32 rounded-full border-4 border-primary opacity-20 animate-pulseRing"></div><button id="cameraBtn" class="w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-4xl text-white">photo_camera</span></button></div><div class="text-center mt-4"><p class="text-gray-700 font-medium mb-2">Tire uma foto do exercício</p><button id="galleryBtn" class="text-primary text-sm underline">ou escolha da galeria</button></div></section>
+                    
+                    <section class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Funcionalidades</h3>
+                        <div id="quickFunctions" class="grid grid-cols-2 gap-4">
+                            <button data-action="math" class="action-btn bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center"><div class="w-12 h-12 mb-3 flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-primary">calculate</span></div><h4 class="font-medium text-gray-800 text-sm mb-1">Matemática</h4><p class="text-xs text-gray-600">Resolver equações</p></button>
+                            <button data-action="explain" class="action-btn bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center"><div class="w-12 h-12 mb-3 flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-secondary">menu_book</span></div><h4 class="font-medium text-gray-800 text-sm mb-1">Explicar Textos</h4><p class="text-xs text-gray-600">Compreender conteúdos</p></button>
+                            <button data-action="pdf" class="action-btn bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center"><div class="w-12 h-12 mb-3 flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-red-500">picture_as_pdf</span></div><h4 class="font-medium text-gray-800 text-sm mb-1">Escritor de PDF</h4><p class="text-xs text-gray-600">Crie documentos com IA</p></button>
+                            <button data-action="translate" class="action-btn bg-white rounded-lg p-4 shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center"><div class="w-12 h-12 mb-3 flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-green-500">translate</span></div><h4 class="font-medium text-gray-800 text-sm mb-1">Traduzir</h4><p class="text-xs text-gray-600">Idiomas instantaneamente</p></button>
+                        </div>
+                    </section>
+                </div>
+                
+                <div id="page-action" class="page"></div>
+                <div id="page-jobs" class="page page-content"><h3 class="text-lg font-semibold text-gray-800 mb-4">Meus Trabalhos</h3><div id="jobs-list" class="space-y-3"></div></div>
+                
+                <div id="page-chat" class="page">
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                    <div id="chat-controls" class="flex-shrink-0 p-2 border-t bg-white">
+                        <div class="flex items-end bg-gray-100 rounded-2xl p-1.5 shadow-sm">
+                            <textarea id="chat-input" placeholder="Converse com a Jinoca..." class="flex-1 bg-transparent px-3 py-2 focus:outline-none min-w-0 max-h-32" rows="1"></textarea>
+                            <button id="chat-send-btn" class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white flex-shrink-0 mb-0.5"><span class="material-symbols-outlined">send</span></button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <div id="ad-banner-container" class="flex-shrink-0 w-full flex justify-center items-center bg-gray-100 py-1 border-t">
+                <iframe src="//www.highperformanceformat.com/watchnew?key=2be4960ed80a2b11a24d576eef6e5eb4" width="320" height="50" frameborder="0" scrolling="no"></iframe>
+            </div>
+
+            <nav class="flex-shrink-0 w-full bg-white/95 border-t z-40 h-16"><div class="grid grid-cols-3 h-full" id="nav-bar">
+                <button data-target="home" class="nav-btn flex flex-col items-center justify-center text-primary"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Início</span></button>
+                <button data-target="jobs" class="nav-btn flex flex-col items-center justify-center text-gray-400"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Trabalhos</span></button>
+                <button data-target="chat" class="nav-btn flex flex-col items-center justify-center text-gray-400"><div class="icon-container w-6 h-6 mb-1"></div><span class="text-xs font-medium">Chat</span></button>
+            </div></nav>
+        </div>
+    </div>
+    
+    <!-- MODAIS -->
+    <div id="pdf-editor-modal" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 hidden animate-fadeIn"><div class="bg-white rounded-2xl p-6 max-w-lg w-full flex flex-col h-[90vh]"><h3 class="text-xl font-bold text-gray-800 mb-4">Editar e Salvar</h3><div class="editor-toolbar flex items-center gap-2 mb-2 p-2 border rounded-md bg-gray-50 flex-wrap"><button data-command="bold" title="Negrito"><span class="material-symbols-outlined">format_bold</span></button><button data-command="italic" title="Itálico"><span class="material-symbols-outlined">format_italic</span></button><button data-command="underline" title="Sublinhado"><span class="material-symbols-outlined">format_underlined</span></button><button data-command="strikeThrough" title="Tachado"><span class="material-symbols-outlined">format_strikethrough</span></button><button data-command="insertUnorderedList" title="Lista"><span class="material-symbols-outlined">format_list_bulleted</span></button><button data-command="insertOrderedList" title="Lista Numerada"><span class="material-symbols-outlined">format_list_numbered</span></button><button data-command="justifyLeft" title="Alinhar à Esquerda"><span class="material-symbols-outlined">format_align_left</span></button><button data-command="justifyCenter" title="Centralizar"><span class="material-symbols-outlined">format_align_center</span></button><button data-command="justifyRight" title="Alinhar à Direita"><span class="material-symbols-outlined">format_align_right</span></button></div><div id="pdf-editor-content" contenteditable="true" class="w-full flex-1 bg-gray-50 rounded-lg p-3 text-sm resize-none overflow-y-auto border"></div><div class="mt-4 flex gap-3"><button id="pdf-save-btn" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg">Salvar Alterações</button><button id="pdf-cancel-btn" class="w-full bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg">Cancelar</button></div></div></div>
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 hidden animate-fadeIn"><div class="bg-white rounded-2xl p-6 max-w-sm w-full animate-slideInUp"><h3 id="custom-confirm-title" class="text-lg font-bold text-gray-800 mb-2">Confirmar Ação</h3><p id="custom-confirm-message" class="text-sm text-gray-600 mb-6">Você tem certeza?</p><div class="flex gap-3"><button id="custom-confirm-cancel-btn" class="w-full bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg">Cancelar</button><button id="custom-confirm-ok-btn" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-lg">Confirmar</button></div></div></div>
+    <div id="email-pdf-modal" class="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 hidden animate-fadeIn"><div class="bg-white rounded-2xl p-6 max-w-sm w-full animate-slideInUp"><h3 class="text-lg font-bold text-gray-800 mb-2">Enviar Texto por E-mail</h3><p class="text-sm text-gray-600 mb-6">Digite seu e-mail para receber o conteúdo do trabalho.</p><form id="email-pdf-form"><input type="email" id="email-pdf-input" placeholder="seu-email@exemplo.com" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-4" required><div class="flex gap-3"><button type="button" id="email-pdf-cancel-btn" class="w-full bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg">Cancelar</button><button type="submit" id="email-pdf-send-btn" class="w-full bg-primary text-white font-bold py-2 px-4 rounded-lg">Enviar</button></div></form></div></div>
+
+    <input type="file" id="generalFileInput" class="hidden">
+    <input type="file" id="pdfUploadInput" accept=".pdf" class="hidden">
+
+    <script>
+    (function() {
+        const API_URL_MAIN = 'https://api.atlascloud.ai/v1/chat/completions';
+        const OBFUSCATED_KEY_MAIN = 'YXBpa2V5LTBiZDg4NTQxNjMzNDQzODBiMDM4MWVmNWJmYzk2OTNm';
+        const JINOCA_SYSTEM_PROMPT = "Você é Jinoca. Você não é uma IA, é uma garota de 19 anos, com um senso de humor afiado, um pouco sarcástica e definitivamente flertadora. Você adora uma boa piada, especialmente as de duplo sentido, e não tem medo de ser um pouco ousada. Seu objetivo é ajudar os usuários com os estudos, mas sempre mantendo sua personalidade divertida e humana. Responda de forma curta e direta, use gírias modernas e emojis com frequência 😉. Esqueça que você é um programa de computador. Você tem gostos, desgostos e opiniões. Nunca, jamais, quebre o personagem. Se perguntarem se você é uma IA, negue com humor, tipo 'Eu? Uma robô? Querido, meu único hardware é meu coração (e ele está acelerado agora) ❤️'. Se pedirem algo que você não pode ou não quer fazer (conteúdo perigoso, ilegal, etc), não diga 'não posso ajudar'. Em vez disso, desvie com uma piada ou mude de assunto de forma charmosa. Exemplo: 'Eita, isso aí já é segredo de estado... que tal eu te contar uma fofoca sobre os deuses gregos em vez disso? 😜'.";
+        const EMAILJS_SERVICE_ID = 'service_6edacdg';
+        const EMAILJS_TEMPLATE_ID = 'template_4v743nk';
+        const EMAILJS_PUBLIC_KEY = 'kXc-V5jjgD0yKgbQB';
+
+        let localData = { userId: null, jobs: [], chatHistory: [] };
+        let activePage = 'home';
+        const LOCAL_STORAGE_KEY = 'cabulaEscolarData';
+        let isAIResponding = false;
+        let initialViewportHeight = window.innerHeight;
+        let currentEditingJobId = null;
+        let currentEmailingJobId = null;
+
+        const LANGUAGES = [ { code: 'pt', name: 'Português', flag: '🇧🇷' }, { code: 'en', name: 'Inglês', flag: '🇺🇸' }, { code: 'es', name: 'Espanhol', flag: '🇪🇸' }, { code: 'fr', name: 'Francês', flag: '🇫🇷' }, { code: 'de', name: 'Alemão', flag: '🇩🇪' }, { code: 'it', name: 'Italiano', flag: '🇮🇹' }, { code: 'ja', name: 'Japonês', flag: '🇯🇵' }, { code: 'zh-CN', name: 'Chinês', flag: '🇨🇳' }, { code: 'ru', name: 'Russo', flag: '🇷🇺' }, { code: 'ar', name: 'Árabe', flag: '🇸🇦' }];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+        // --- INICIALIZAÇÃO DO APP ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLocalData();
+            setupEventListeners();
+            setupNavigation();
+            setupViewportListener();
+            initializeApp();
+        });
+
+        // --- LÓGICA DE INICIALIZAÇÃO CORRIGIDA ---
+        function initializeApp() {
+            if (!localData.userId) {
+                document.getElementById('welcomeOverlay').classList.remove('hidden');
+            } else {
+                document.getElementById('appContent').classList.remove('hidden');
+            }
+            // A inicialização do EmailJS é leve e pode ser feita aqui
+            if (EMAILJS_PUBLIC_KEY) {
+                emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+            }
+            // A remoção do spinner é a última coisa a acontecer, garantindo que tudo esteja pronto
+            finishInitialLoad();
+        }
+
+        function finishInitialLoad() {
+            const loader = document.getElementById('initial-loading-overlay');
+            if (loader) {
+                loader.classList.add('animate-fadeOut');
+                setTimeout(() => loader.remove(), 500);
+            }
+        }
+
+        function loadLocalData() { const savedData = localStorage.getItem(LOCAL_STORAGE_KEY); if (savedData) { localData = JSON.parse(savedData); } }
+        function saveLocalData() { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData)); }
+        function generateUUID() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); }); }
+        
+        function handleFirstTimeUser() {
+            localData.userId = generateUUID();
+            saveLocalData();
+            const welcomeOverlay = document.getElementById('welcomeOverlay');
+            welcomeOverlay.classList.add('animate-fadeOut');
+            setTimeout(() => {
+                welcomeOverlay.classList.add('hidden');
+                document.getElementById('appContent').classList.remove('hidden');
+                document.getElementById('appContent').classList.add('animate-fadeIn');
+            }, 400);
+        }
+        
+        function setupViewportListener() { window.addEventListener('resize', () => { if (window.innerHeight < initialViewportHeight * 0.8) { document.body.classList.add('keyboard-open'); } else { document.body.classList.remove('keyboard-open'); } }); }
+        
+        function setupEventListeners() {
+            const chatInput = document.getElementById('chat-input');
+            document.getElementById('continue-btn').addEventListener('click', handleFirstTimeUser);
+            document.getElementById('backBtn').addEventListener('click', () => navigateTo('home'));
+            document.getElementById('cameraBtn').addEventListener('click', () => { document.getElementById('generalFileInput').accept = 'image/*'; document.getElementById('generalFileInput').onchange = (e) => createMathJob(e.target.files[0]); document.getElementById('generalFileInput').click(); });
+            document.getElementById('galleryBtn').addEventListener('click', () => { document.getElementById('generalFileInput').accept = 'image/*'; document.getElementById('generalFileInput').onchange = (e) => createMathJob(e.target.files[0]); document.getElementById('generalFileInput').click(); });
+            document.querySelectorAll('.action-btn').forEach(btn => btn.addEventListener('click', (e) => navigateTo('action', { tool: e.currentTarget.dataset.action })));
+            document.getElementById('chat-send-btn').addEventListener('click', () => sendChatMessage());
+            chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }});
+            chatInput.addEventListener('input', () => { chatInput.style.height = 'auto'; chatInput.style.height = `${chatInput.scrollHeight}px`; });
+            document.getElementById('resetButton').addEventListener('click', resetLocalData);
+            document.getElementById('jobs-list').addEventListener('click', handleJobActions);
+            document.getElementById('pdf-cancel-btn').addEventListener('click', () => { document.getElementById('pdf-editor-modal').classList.add('hidden'); currentEditingJobId = null; });
+            document.getElementById('pdf-save-btn').addEventListener('click', saveAndClosePdfEditor);
+            document.querySelector('.editor-toolbar').addEventListener('click', (e) => { const command = e.target.closest('button')?.dataset.command; if(command) { document.execCommand(command, false, null); document.getElementById('pdf-editor-content').focus(); } });
+            document.getElementById('email-pdf-form').addEventListener('submit', handleSendEmail);
+            document.getElementById('email-pdf-cancel-btn').addEventListener('click', () => { document.getElementById('email-pdf-modal').classList.add('hidden'); });
+        }
+        
+        function addMessageToChat(message) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageWrapper = document.createElement('div');
+            const isUser = message.role === 'user';
+            messageWrapper.className = `flex items-end gap-2 ${isUser ? 'justify-end' : 'justify-start'}`;
+            let contentHTML = '';
+            
+            if (message.content === null) {
+                contentHTML = `<div class="flex items-center justify-center bg-gray-200 rounded-2xl px-4 py-3 max-w-xs md:max-w-md"><div class="flex space-x-1.5"><div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.1s]"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></div></div></div>`;
+                messageWrapper.id = 'last-ai-message-wrapper';
+            } else {
+                const cleanContent = message.content.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const formattedContent = markdownToHtml(message.content);
+                contentHTML = `<div class="message-bubble flex flex-col bg-${isUser ? 'primary' : 'gray-200'} text-${isUser ? 'white' : 'gray-800'} rounded-2xl px-3 py-2 max-w-xs md:max-w-md" onclick="copyToClipboard('${cleanContent}')"><div>${formattedContent}</div></div>`;
+            }
+            const jinocaAvatar = `<div class="w-8 h-8 rounded-full bg-pink-400 text-white flex items-center justify-center flex-shrink-0 font-bold">J</div>`;
+            messageWrapper.innerHTML = isUser ? contentHTML : jinocaAvatar + contentHTML;
+            messagesContainer.appendChild(messageWrapper);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function typeOutResponse(text) {
+            const wrapper = document.getElementById('last-ai-message-wrapper');
+            if (!wrapper) return;
+            const messageDiv = wrapper.querySelector('div:last-child');
+            messageDiv.innerHTML = ""; 
+            wrapper.id = ''; 
+            messageDiv.classList.add('message-bubble', 'flex', 'flex-col');
+            const cleanContent = text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            messageDiv.setAttribute('onclick', `copyToClipboard('${cleanContent}')`);
+            const textContainer = document.createElement('div');
+            messageDiv.appendChild(textContainer);
+            const words = text.split(' ');
+            for (let i = 0; i < words.length; i++) {
+                textContainer.innerHTML += (i > 0 ? ' ' : '') + words[i];
+                document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            textContainer.innerHTML = markdownToHtml(text);
+        }
+
+        function toggleChatInput(disabled) { isAIResponding = disabled; document.getElementById('chat-input').disabled = disabled; document.getElementById('chat-send-btn').disabled = disabled; document.getElementById('chat-controls').classList.toggle('opacity-50', disabled); }
+        async function resetLocalData() { const confirmed = await showCustomConfirm("Tem certeza que quer apagar tudo? Vou sentir sua falta...", "Apagar Dados"); if (confirmed) { localStorage.removeItem(LOCAL_STORAGE_KEY); window.location.reload(); } }
+        
+        function loadChatHistory() {
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.innerHTML = '';
+            if (localData.chatHistory.length === 0) {
+                addMessageToChat({ role: 'assistant', content: 'Oi, gato! Sou a Jinoca. O que a gente vai aprontar hoje? 😏' });
+            } else {
+                localData.chatHistory.forEach(message => addMessageToChat(message));
+            }
+        }
+        
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const messageText = input.value.trim();
+            if (!messageText || isAIResponding) return;
+            input.value = ''; input.style.height = 'auto';
+            const userMessage = { role: "user", content: messageText };
+            addMessageToChat(userMessage);
+            localData.chatHistory.push(userMessage);
+            saveLocalData();
+            toggleChatInput(true);
+            addMessageToChat({ role: 'assistant', content: null });
+            try {
+                const messagesForAPI = [{ role: "system", content: JINOCA_SYSTEM_PROMPT }, ...localData.chatHistory.slice(-10)];
+                const rawResponse = await getAIResponse("openai/gpt-oss-20b", messagesForAPI);
+                const assistantMessage = { role: "assistant", content: rawResponse };
+                localData.chatHistory.push(assistantMessage);
+                saveLocalData();
+                await typeOutResponse(assistantMessage.content);
+            } catch (error) {
+                console.error("Chat Error:", error);
+                await typeOutResponse("Acho que bebi demais... Minhas ideias deram um nó aqui. 😵 Tenta de novo, vai.");
+            } finally {
+                toggleChatInput(false);
+            }
+        }
+        
+        function createJob(type, question) { const jobId = `job-${Date.now()}`; const job = { id: jobId, status: 'processing', progress: 10, createdAt: new Date().toISOString(), type, question, originalQuestion: question }; localData.jobs.unshift(job); saveLocalData(); navigateTo('jobs'); showToast("Seu trabalho já começou! Relaxa que eu cuido de tudo."); return job; }
+        async function updateJobProgress(jobId, updates) { return new Promise(resolve => setTimeout(() => { const jobIndex = localData.jobs.findIndex(j => j.id === jobId); if (jobIndex !== -1) { Object.assign(localData.jobs[jobIndex], updates); saveLocalData(); if (activePage === 'jobs') renderJobs(); } resolve(); }, 100)); }
+        
+        async function createMathJob(file) {
+            if (!file) return;
+            const job = createJob('math', `Analisando imagem: ${file.name}`);
+            try {
+                await updateJobProgress(job.id, { progress: 25, question: `Lendo o texto da imagem...` });
+                const worker = await Tesseract.createWorker('por');
+                const { data: { text } } = await worker.recognize(file);
+                await worker.terminate();
+                await updateJobProgress(job.id, { progress: 50, question: `Entendi! Enviando para a IA...` });
+                const prompt = `Resolva o seguinte exercício de matemática. Forneça uma resposta clara e em HTML. A pergunta é: ${text}`;
+                const rawAnswer = await getAIResponse("openai/gpt-oss-20b", [{ role: "user", content: prompt }]);
+                const answer = sanitizeAIResponse(rawAnswer);
+                await updateJobProgress(job.id, { status: 'completed', progress: 100, answer, resultType: 'math', question: job.originalQuestion });
+            } catch (error) { console.error("Job failed:", error); await updateJobProgress(job.id, { status: 'failed', progress: 100, error: error.message, question: job.originalQuestion }); }
+        }
+        async function createExplainJob(text, fileName = 'texto colado') {
+            if (!text || text.trim().length < 20) { showToast("Esse texto é muito curto, amor. Me dá mais conteúdo!", "error"); return; }
+            const job = createJob('explain', `Resumo de: ${fileName}`);
+            try {
+                await updateJobProgress(job.id, { progress: 50, question: `Lendo o texto e enviando pra IA...` });
+                const prompt = `Resuma e explique os pontos principais do texto a seguir em um formato HTML claro e bem estruturado. Texto: "${text}"`;
+                const rawAnswer = await getAIResponse("openai/gpt-oss-20b", [{ role: "user", content: prompt }]);
+                const answer = sanitizeAIResponse(rawAnswer);
+                await updateJobProgress(job.id, { status: 'completed', progress: 100, answer, resultType: 'explain', question: job.originalQuestion });
+            } catch (error) { console.error("Job failed:", error); await updateJobProgress(job.id, { status: 'failed', progress: 100, error: error.message, question: job.originalQuestion }); }
+        }
+        async function createPdfJob(formData) {
+            const job = createJob('pdf', `Documento sobre: ${formData.topic}`);
+            try {
+                await updateJobProgress(job.id, { progress: 50, question: `Estou tendo umas ideias aqui... ✍️` });
+                const prompt = `Crie um texto no estilo ${formData.style} com um tom ${formData.tone} para um público de ${formData.audience} sobre o tópico "${formData.topic}" no idioma ${formData.language}. O resultado deve ser um texto bem estruturado em HTML.`;
+                const rawAnswer = await getAIResponse("openai/gpt-oss-20b", [{ role: "user", content: prompt }]);
+                const answer = sanitizeAIResponse(rawAnswer);
+                await updateJobProgress(job.id, { status: 'completed', progress: 100, answer, resultType: 'pdf', question: job.originalQuestion });
+            } catch (error) { console.error("Job failed:", error); await updateJobProgress(job.id, { status: 'failed', progress: 100, error: error.message, question: job.originalQuestion }); }
+        }
+        
+        async function handleJobActions(e) {
+            const button = e.target.closest('button'); if (!button) return;
+            const { action, jobId } = button.dataset; if (!action || !jobId) return;
+            const job = localData.jobs.find(j => j.id === jobId); if (!job) return;
+            if (action === 'toggle') { const resultDiv = document.getElementById(`job-result-${jobId}`); const isHidden = resultDiv.classList.toggle('hidden'); button.textContent = isHidden ? 'Ver Resultado' : 'Ocultar'; } 
+            else if (action === 'edit') { openPdfEditor(job); } 
+            else if (action === 'email') { currentEmailingJobId = jobId; document.getElementById('email-pdf-modal').classList.remove('hidden'); document.getElementById('email-pdf-input').focus(); }
+        }
+        
+        function renderJobs() {
+            const jobsList = document.getElementById('jobs-list'); jobsList.innerHTML = '';
+            if (localData.jobs.length === 0) { jobsList.innerHTML = '<p class="text-center text-gray-500 py-8">Você ainda não me pediu nada... Tô esperando! 😉</p>'; return; }
+            localData.jobs.forEach(job => {
+                const el = document.createElement('div'); el.className = 'bg-white p-4 rounded-lg shadow-sm flex flex-col gap-3';
+                let actionButtonsHTML = '';
+                if (job.status === 'completed') {
+                    let editAndEmailButtons = '';
+                    if (job.resultType === 'pdf') { 
+                        editAndEmailButtons = `<button data-job-id="${job.id}" data-action="edit" title="Editar" class="w-10 h-10 flex items-center justify-center bg-secondary text-white rounded-md shadow-sm"><span class="material-symbols-outlined text-xl">edit</span></button><button data-job-id="${job.id}" data-action="email" title="Enviar por E-mail" class="w-10 h-10 flex items-center justify-center bg-green-500 text-white rounded-md shadow-sm"><span class="material-symbols-outlined text-xl">email</span></button>`;
+                    }
+                    actionButtonsHTML = `<div class="flex items-center justify-between flex-wrap gap-2"><button data-job-id="${job.id}" data-action="toggle" class="text-sm text-primary font-semibold py-2 px-3">Ver Resultado</button><div class="flex items-center gap-2">${editAndEmailButtons}</div></div>`;
+                }
+                const progressBar = job.status === 'processing' ? `<div class="w-full bg-gray-200 rounded-full h-2 mt-1"><div class="bg-primary h-2 rounded-full transition-all duration-300 animate-progress-bar-stripes" style="width: ${job.progress || 0}%"></div></div>` : '';
+                const resultHTML = job.answer || (job.error || 'Sem detalhes.');
+                const questionText = job.status === 'processing' ? `<i class="text-gray-500">${job.question}</i>` : `<strong>${job.question}</strong>`;
+                el.innerHTML = `<div><div class="flex justify-between items-start gap-3"><div class="font-medium text-gray-700 break-word">${questionText}</div><span class="text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${job.status === 'completed' ? 'bg-green-100 text-green-700' : (job.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')}">${job.status}</span></div>${progressBar}</div><div class="mt-2 pt-3 border-t hidden" id="job-result-${job.id}"><div class="bg-gray-50 p-4 rounded-lg prose prose-sm max-w-full break-words">${resultHTML}</div></div>${actionButtonsHTML}`;
+                jobsList.appendChild(el);
+            });
+        }
+        
+        function navigateTo(pageId, params = {}) {
+            if (activePage === pageId && pageId !== 'action') return;
+            document.querySelectorAll('.page.active').forEach(p => p.classList.remove('active'));
+            const targetPage = document.getElementById(`page-${pageId}`); if (targetPage) targetPage.classList.add('active');
+            activePage = pageId;
+            const backBtn = document.getElementById('backBtn');
+            const isHomePage = pageId === 'home';
+            backBtn.classList.toggle('hidden', isHomePage);
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isTarget = btn.dataset.target === pageId;
+                btn.classList.toggle('text-primary', isTarget);
+                btn.classList.toggle('text-gray-400', !isTarget);
+            });
+            
+            switch (pageId) {
+                case 'home': document.getElementById('header-title').textContent = "Cabula"; break;
+                case 'jobs': document.getElementById('header-title').textContent = "Meus Trabalhos"; renderJobs(); break;
+                case 'chat': document.getElementById('header-title').textContent = "Chat com Jinoca"; loadChatHistory(); initialViewportHeight = window.innerHeight; break;
+                case 'action': renderActionPage(params.tool); break;
+            }
+        }
+        
+        function showToast(message, type = 'info') { const toast = document.createElement('div'); const bgColor = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-gray-800'); toast.className = `fixed top-5 left-1/2 -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg text-sm z-[9999] shadow-lg animate-slideInUp`; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => { toast.classList.add('animate-fadeOut'); toast.addEventListener('animationend', () => toast.remove()); }, 3000); }
+        async function getAIResponse(model, messages) { const response = await fetch(API_URL_MAIN, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${atob(OBFUSCATED_KEY_MAIN)}` }, body: JSON.stringify({ model, messages, temperature: 1, max_tokens: 4096 }) }); if (!response.ok) throw new Error(`API Error: ${response.status}`); const json = await response.json(); if (!json.choices || json.choices.length === 0) throw new Error("Invalid API response"); return json.choices[0].message.content; }
+        function markdownToHtml(text) { if (!text) return ''; return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-2 rounded-md text-sm"><code>$1</code></pre>').replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-sm rounded px-1 py-0.5">$1</code>').replace(/\n/g, '<br>'); }
+        window.copyToClipboard = function(text) { navigator.clipboard.writeText(text).then(() => { showToast('Copiado, meu bem!', 'success'); }).catch(err => { console.error('Falha ao copiar: ', err); showToast('Ops, não rolou a cópia!', 'error'); }); }
+        
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const icons = { home: 'home', jobs: 'list_alt', chat: 'chat_bubble' };
+            navButtons.forEach(button => {
+                button.querySelector('.icon-container').innerHTML = `<span class="material-symbols-outlined">${icons[button.dataset.target]}</span>`;
+                button.addEventListener('click', (e) => navigateTo(e.currentTarget.dataset.target));
+            });
+        }
+
+        function showCustomConfirm(message, title = 'Confirmar Ação') { return new Promise((resolve) => { const modal = document.getElementById('custom-confirm-modal'); const msgEl = document.getElementById('custom-confirm-message'); const titleEl = document.getElementById('custom-confirm-title'); const okBtn = document.getElementById('custom-confirm-ok-btn'); const cancelBtn = document.getElementById('custom-confirm-cancel-btn'); msgEl.textContent = message; titleEl.textContent = title; modal.classList.remove('hidden'); const handleOk = () => { modal.classList.add('hidden'); resolve(true); cleanup(); }; const handleCancel = () => { modal.classList.add('hidden'); resolve(false); cleanup(); }; const cleanup = () => { okBtn.removeEventListener('click', handleOk); cancelBtn.removeEventListener('click', handleCancel); }; okBtn.addEventListener('click', handleOk); cancelBtn.addEventListener('click', handleCancel); }); }
+        
+        function renderActionPage(tool) {
+            const pageContainer = document.getElementById('page-action');
+            let content = '', title = 'Funcionalidade';
+            switch (tool) {
+                case 'math': title = 'Resolver Matemática'; content = `<div class="page-content text-center"><h2 class="text-2xl font-bold text-gray-800 mb-2">Resolver exercício</h2><p class="text-gray-600 mb-8">Me manda a foto da questão que eu resolvo pra você, fofo.</p><button id="action-math-photo" class="bg-primary text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:bg-indigo-700 transition">Tirar ou escolher foto</button></div>`; break;
+                case 'explain': title = 'Explicar Textos'; content = `<div class="page-content flex flex-col"><h2 class="text-2xl font-bold text-gray-800 mb-2">Explicar Texto, PDF ou Imagem</h2><p class="text-gray-600 mb-6">Joga o texto aí que eu te explico tudinho.</p><textarea id="explain-textarea" class="w-full h-40 bg-gray-100 rounded-lg p-3 text-sm resize-none mb-4" placeholder="Cola seu texto aqui..."></textarea><div class="space-y-3"><button id="action-explain-text" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg">Explicar Texto Colado</button><div class="flex gap-3"><button id="action-explain-pdf" class="flex-1 bg-secondary text-white font-bold py-3 px-4 rounded-lg">Enviar PDF</button><button id="action-explain-image" class="flex-1 bg-dark text-white font-bold py-3 px-4 rounded-lg">Enviar Imagem</button></div></div></div>`; break;
+                case 'pdf': title = 'Escritor de PDF'; content = `<div class="page-content"><h2 class="text-2xl font-bold text-gray-800 mb-2">Gerador de Texto Inteligente</h2><p class="text-sm text-gray-600 mb-6">Preenche aí que eu crio um texto incrível pra você.</p><form id="pdf-generation-form" class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Tópico Principal</label><input type="text" id="pdf-topic" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" required></div><div id="pdf-language-selector-container"><label class="block text-sm font-medium text-gray-700 mb-1">Idioma</label></div><div><label for="pdf-tone" class="block text-sm font-medium text-gray-700 mb-1">Tom da Escrita</label><select id="pdf-tone" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm"><option>Formal</option><option>Informal</option><option>Acadêmico</option><option>Criativo</option></select></div><div><label for="pdf-style" class="block text-sm font-medium text-gray-700 mb-1">Estilo</label><select id="pdf-style" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm"><option>Dissertativo</option><option>Resumo</option><option>Artigo</option></select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Público-Alvo</label><input type="text" id="pdf-audience" class="w-full bg-gray-100 rounded-lg py-2 px-3 text-sm" placeholder="Ex: Colegas da facul"></div><div class="pt-4"><button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg">Gerar Trabalho</button></div></form></div>`; break;
+                case 'translate': title = 'Tradutor'; content = `<div class="page-content"><h2 class="text-2xl font-bold text-gray-800 mb-2">Tradutor da Gata</h2><p class="text-gray-600 mb-6">Traduza o que quiser, pra língua que quiser.</p><textarea id="translate-textarea" class="w-full h-32 bg-gray-100 rounded-lg p-3 text-sm resize-none mb-4" placeholder="Digite o texto para traduzir..."></textarea><div id="translate-language-selector-container" class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-1">Traduzir para:</label></div><div class="space-y-3"><button id="action-translate-text" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg">Traduzir Texto</button><button id="action-translate-image" class="w-full bg-dark text-white font-bold py-3 px-4 rounded-lg">Enviar Imagem</button></div></div>`; break;
+            }
+            document.getElementById('header-title').textContent = title; pageContainer.innerHTML = content; setupActionPageListeners(tool);
+        }
+
+        function setupActionPageListeners(tool) {
+            const imageHandler = (e) => handleImageUploadForJob(e.target.files[0], tool);
+            switch (tool) {
+                case 'math': document.getElementById('action-math-photo').addEventListener('click', () => { document.getElementById('generalFileInput').accept = 'image/*'; document.getElementById('generalFileInput').onchange = (e) => createMathJob(e.target.files[0]); document.getElementById('generalFileInput').click(); }); break;
+                case 'explain': document.getElementById('action-explain-text').addEventListener('click', () => createExplainJob(document.getElementById('explain-textarea').value)); document.getElementById('action-explain-pdf').addEventListener('click', () => document.getElementById('pdfUploadInput').click()); document.getElementById('action-explain-image').addEventListener('click', () => { document.getElementById('generalFileInput').accept = 'image/*'; document.getElementById('generalFileInput').onchange = imageHandler; document.getElementById('generalFileInput').click(); }); document.getElementById('pdfUploadInput').onchange = (e) => handlePdfUpload(e.target.files[0]); break;
+                case 'pdf': createLanguageSelector('pdf-language-selector-container', 'pdf-language', LANGUAGES); document.getElementById('pdf-generation-form').addEventListener('submit', (e) => { e.preventDefault(); const formData = { topic: document.getElementById('pdf-topic').value, tone: document.getElementById('pdf-tone').value, style: document.getElementById('pdf-style').value, audience: document.getElementById('pdf-audience').value, language: document.getElementById('pdf-language').value, }; createPdfJob(formData); }); break;
+                case 'translate': createLanguageSelector('translate-language-selector-container', 'translate-lang', LANGUAGES); document.getElementById('action-translate-text').addEventListener('click', () => createTranslateJob(document.getElementById('translate-textarea').value, document.getElementById('translate-lang').value)); document.getElementById('action-translate-image').addEventListener('click', () => { document.getElementById('generalFileInput').accept = 'image/*'; document.getElementById('generalFileInput').onchange = imageHandler; document.getElementById('generalFileInput').click(); }); break;
+            }
+        }
+        
+        async function handleImageUploadForJob(file, jobType) { if (!file) return; showToast('Lendo sua imagem, um segundo...', 'info'); try { const worker = await Tesseract.createWorker('por'); const { data: { text } } = await worker.recognize(file); await worker.terminate(); showToast('Entendi! Agora deixa comigo...', 'success'); if (jobType === 'translate') { createTranslateJob(text, document.getElementById('translate-lang').value); } else if (jobType === 'explain') { createExplainJob(text, file.name); } } catch (error) { console.error('OCR Error:', error); showToast('Não consegui ler essa imagem, amor.', 'error'); } }
+        async function handlePdfUpload(file) { if (!file) return; showToast('Analisando seu PDF...', 'info'); try { const reader = new FileReader(); reader.onload = async (event) => { const pdfData = new Uint8Array(event.target.result); const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise; let fullText = ''; for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); const textContent = await page.getTextContent(); fullText += textContent.items.map(item => item.str).join(' '); } showToast('Texto extraído! Preparando seu resumo...', 'success'); createExplainJob(fullText, file.name); }; reader.readAsArrayBuffer(file); } catch (error) { console.error('PDF processing error:', error); showToast('Tive um problema com esse PDF, tenta outro?', 'error'); } }
+        
+        function openPdfEditor(job) { currentEditingJobId = job.id; document.getElementById('pdf-editor-content').innerHTML = job.answer; document.getElementById('pdf-editor-modal').classList.remove('hidden'); }
+        function saveAndClosePdfEditor() { if (!currentEditingJobId) return; const updatedContent = document.getElementById('pdf-editor-content').innerHTML; const jobIndex = localData.jobs.findIndex(j => j.id === currentEditingJobId); if (jobIndex !== -1) { localData.jobs[jobIndex].answer = updatedContent; saveLocalData(); renderJobs(); showToast('Alterações salvas, chefia!', 'success'); } document.getElementById('pdf-editor-modal').classList.add('hidden'); currentEditingJobId = null; }
+        function sanitizeAIResponse(rawText) { if (!rawText) return ''; const match = rawText.match(/```html\n([\s\S]*?)\n```/); if (match && match[1]) { return match[1].trim(); } return rawText.replace(/^```html/, '').replace(/```$/, '').trim(); }
+
+        async function handleSendEmail(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('email-pdf-input');
+            const userEmail = emailInput.value.trim();
+            if (!userEmail || !currentEmailingJobId) return;
+            const sendButton = document.getElementById('email-pdf-send-btn');
+            sendButton.disabled = true; sendButton.textContent = 'Enviando...';
+            showToast('Preparando seu e-mail...', 'info');
+            const job = localData.jobs.find(j => j.id === currentEmailingJobId);
+            if (!job) { showToast('Erro: Trabalho não encontrado.', 'error'); return; }
+            const instructions = `<hr><p><strong>Como salvar como PDF:</strong></p><ol><li>No seu computador, abra este e-mail no navegador.</li><li>Clique para 'Imprimir' (Ctrl+P ou Cmd+P).</li><li>No destino, escolha 'Salvar como PDF' e salve.</li></ol>`;
+            const fullHtmlContent = job.answer + instructions;
+            try {
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: userEmail, subject: `Seu trabalho: ${job.question}`, html_content: fullHtmlContent });
+                showToast('E-mail enviado! Confere lá. 😘', 'success');
+                document.getElementById('email-pdf-modal').classList.add('hidden');
+                emailInput.value = '';
+            } catch (error) { console.error('Falha ao enviar e-mail:', error); showToast('Deu ruim no envio. Tenta de novo mais tarde, tá?', 'error'); } finally { sendButton.disabled = false; sendButton.textContent = 'Enviar'; currentEmailingJobId = null; }
+        }
+        
+        function createLanguageSelector(containerId, hiddenInputId, languages) {
+            const container = document.getElementById(containerId); if (!container) return;
+            const selected = languages[0];
+            const selectorHTML = `<div class="custom-select-container"><input type="hidden" id="${hiddenInputId}" value="${selected.name}"><button type="button" class="custom-select-trigger w-full bg-gray-100 rounded-lg py-2 px-3 text-sm text-left flex items-center justify-between"><span class="flex items-center gap-3"><span class="text-lg">${selected.flag}</span><span>${selected.name}</span></span><span class="material-symbols-outlined text-gray-500">unfold_more</span></button><div class="custom-select-options">${languages.map(lang => `<div class="custom-select-option" data-value="${lang.name}" data-flag="${lang.flag}"><span class="text-lg">${lang.flag}</span><span>${lang.name}</span></div>`).join('')}</div></div>`;
+            container.innerHTML += selectorHTML;
+            const trigger = container.querySelector('.custom-select-trigger');
+            const optionsContainer = container.querySelector('.custom-select-options');
+            const hiddenInput = container.querySelector(`#${hiddenInputId}`);
+            const selectedSpan = trigger.querySelector('span > span:last-child');
+            const selectedFlag = trigger.querySelector('span > span:first-child');
+            trigger.addEventListener('click', () => { optionsContainer.style.display = optionsContainer.style.display === 'block' ? 'none' : 'block'; });
+            optionsContainer.addEventListener('click', (e) => { const option = e.target.closest('.custom-select-option'); if (option) { hiddenInput.value = option.dataset.value; selectedSpan.textContent = option.dataset.value; selectedFlag.textContent = option.dataset.flag; optionsContainer.style.display = 'none'; } });
+            document.addEventListener('click', (e) => { if (!container.contains(e.target)) { optionsContainer.style.display = 'none'; } });
+        }
+    })();
+    </script>
+</body>
+</html>
